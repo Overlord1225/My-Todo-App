@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { signUp } from "../auth/actions";
 
+// This component handles the signup form and reads search params
 function SignupForm() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
@@ -53,6 +54,7 @@ function SignupForm() {
   );
 }
 
+// Main page component with Suspense boundary
 export default function SignupPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
