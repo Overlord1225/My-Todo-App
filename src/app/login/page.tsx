@@ -1,52 +1,52 @@
-"use client";
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
 import { signIn } from "../auth/actions";
 
-export default function LoginPage() {
-  const searchParams = useSearchParams();
-  const error = searchParams.get("error");
-  const message = searchParams.get("message");
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: { error?: string; message?: string };
+}) {
+  const error = searchParams?.error;
+  const message = searchParams?.message;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white p-8 rounded-lg shadow-md w-96">
         <h1 className="text-2xl font-bold text-center mb-6">Login</h1>
-        
+
         {error && (
           <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
         )}
         {message && (
           <p className="text-green-500 text-sm mb-4 text-center">{message}</p>
         )}
-        
+
         <form action={signIn} className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Email</label>
-            <input 
-              name="email" 
-              type="email" 
-              required 
+            <input
+              name="email"
+              type="email"
+              required
               className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Password</label>
-            <input 
-              name="password" 
-              type="password" 
-              required 
+            <input
+              name="password"
+              type="password"
+              required
               className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
           </div>
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
           >
             Sign In
           </button>
         </form>
-        
+
         <p className="text-center text-sm text-gray-600 mt-4">
           Don't have an account?{" "}
           <a href="/signup" className="text-blue-600 hover:underline">
