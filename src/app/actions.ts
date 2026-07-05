@@ -54,3 +54,19 @@ export async function toggleTodo(todoId: number) {
 
   revalidatePath("/"); // Refresh the list
 }
+
+export async function editTodo(todoId: number, newTitle: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  if (!newTitle.trim()) {
+    throw new Error("Title cannot be empty");
+  }
+
+  await db.update(todos)
+    .set({ title: newTitle.trim() })
+    .where(eq(todos.id, todoId));
+
+  revalidatePath("/");
+}

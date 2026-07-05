@@ -1,21 +1,18 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { useOptimistic, useTransition } from "react";
-import { Trash2, Check } from "lucide-react";
-import { deleteTodo, toggleTodo } from "@/app/actions";
+import { Trash2, Check, Pencil } from "lucide-react";
+import { deleteTodo, toggleTodo, editTodo } from "@/app/actions";
+import { todos } from "@/db/schema";
+import { InferSelectModel } from "drizzle-orm";
 
-type Todo = {
-  id: number;
-  title: string;
-  completed: boolean | null;
-  userId: string;
-  createdAt: Date | null;
-};
+type Todo = InferSelectModel<typeof todos>;
 
 export default function TodoList({ initialTodos }: { initialTodos: Todo[] }) {
   const [optimisticTodos, setOptimisticTodos] = useOptimistic(
     initialTodos,
-    (state, action: { type: "toggle" | "delete"; id: number }) => {
+    (state, action: { type: "toggle" | "delete" | "edit"; id: number; newTitle?: string }) => {
       if (action.type === "delete") {
         return state.filter((todo) => todo.id !== action.id);
       }
@@ -26,29 +23,87 @@ export default function TodoList({ initialTodos }: { initialTodos: Todo[] }) {
             : todo
         );
       }
+      if (action.type === "edit" && action.newTitle) {
+        return state.map((todo) =>
+          todo.id === action.id
+            ? { ...todo, title: action.newTitle! }
+            : todo
+        );
+      }
       return state;
     }
   );
 
   const [isPending, startTransition] = useTransition();
 
+  // Track which todo is being edited
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const handleToggle = (id: number) => {
     startTransition(async () => {
-      // 1. Immediately update the UI
       setOptimisticTodos({ type: "toggle", id });
-      // 2. Run the Server Action in the background
       await toggleTodo(id);
     });
   };
 
   const handleDelete = (id: number) => {
     startTransition(async () => {
-      // 1. Immediately remove from UI
       setOptimisticTodos({ type: "delete", id });
-      // 2. Run the Server Action in the background
       await deleteTodo(id);
     });
   };
+
+  const startEditing = (todo: Todo) => {
+    setEditingId(todo.id);
+    setEditValue(todo.title);
+    // Focus input after render
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const saveEdit = (id: number) => {
+    const trimmed = editValue.trim();
+    if (!trimmed) {
+      // If empty, revert to original
+      setEditingId(null);
+      return;
+    }
+    // Optimistically update
+    setOptimisticTodos({ type: "edit", id, newTitle: trimmed });
+    // Actually save
+    startTransition(async () => {
+      await editTodo(id, trimmed);
+    });
+    setEditingId(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+  };
+
+  // Keyboard handlers
+  const handleKeyDown = (e: React.KeyboardEvent, id: number) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      saveEdit(id);
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      cancelEdit();
+    }
+  };
+
+  // Click outside to save
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (editingId !== null && inputRef.current && !inputRef.current.contains(e.target as Node)) {
+        saveEdit(editingId);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [editingId, editValue]);
 
   return (
     <div className="space-y-2">
@@ -70,25 +125,58 @@ export default function TodoList({ initialTodos }: { initialTodos: Todo[] }) {
                   ? "bg-green-500 border-green-500"
                   : "border-gray-300 hover:border-blue-500"
               }`}
+              aria-label={todo.completed ? "Mark as incomplete" : "Mark as complete"}
             >
               {todo.completed && <Check size={14} className="text-white" />}
             </button>
 
-            <span
-              className={`flex-1 text-gray-800 ${
-                todo.completed ? "line-through text-gray-400" : ""
-              }`}
-            >
-              {todo.title}
-            </span>
+            {/* Title with Edit */}
+            {editingId === todo.id ? (
+              <input
+                ref={inputRef}
+                type="text"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, todo.id)}
+                className="flex-1 border border-blue-500 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label="Edit todo title"
+              />
+            ) : (
+              <span
+                className={`flex-1 text-gray-800 cursor-pointer ${
+                  todo.completed ? "line-through text-gray-400" : ""
+                }`}
+                onClick={() => startEditing(todo)}
+                onDoubleClick={() => startEditing(todo)}
+                role="button"
+                tabIndex={0}
+                aria-label="Edit todo"
+              >
+                {todo.title}
+              </span>
+            )}
 
-            {/* Delete Button */}
-            <button
-              onClick={() => handleDelete(todo.id)}
-              className="text-gray-400 hover:text-red-500 transition-colors"
-            >
-              <Trash2 size={18} />
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Edit Button (pencil) */}
+              {editingId !== todo.id && (
+                <button
+                  onClick={() => startEditing(todo)}
+                  className="text-gray-400 hover:text-blue-500 transition-colors"
+                  aria-label="Edit todo"
+                >
+                  <Pencil size={16} />
+                </button>
+              )}
+
+              {/* Delete Button */}
+              <button
+                onClick={() => handleDelete(todo.id)}
+                className="text-gray-400 hover:text-red-500 transition-colors"
+                aria-label="Delete todo"
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
           </div>
         ))
       )}
