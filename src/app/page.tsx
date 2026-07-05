@@ -155,7 +155,6 @@ export default async function Home({
               {/* Search Bar */}
               <div className="mb-4">
                 <form method="GET" action="/" className="relative">
-                  <input type="hidden" name="filter" value={currentFilter} />
                   <input
                     type="text"
                     name="search"
@@ -179,48 +178,53 @@ export default async function Home({
                       <X className="w-4 h-4" />
                     </Link>
                   )}
+
+                  <div className="mt-4 flex items-center justify-between border-b border-slate-200 pb-3">
+                    <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                      <button
+                        type="submit"
+                        name="filter"
+                        value="all"
+                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
+                          currentFilter === "all"
+                            ? "bg-white text-slate-900 shadow-sm"
+                            : "text-slate-500 hover:text-slate-700"
+                        }`}
+                      >
+                        All
+                      </button>
+                      <button
+                        type="submit"
+                        name="filter"
+                        value="active"
+                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
+                          currentFilter === "active"
+                            ? "bg-white text-slate-900 shadow-sm"
+                            : "text-slate-500 hover:text-slate-700"
+                        }`}
+                      >
+                        Active
+                      </button>
+                      <button
+                        type="submit"
+                        name="filter"
+                        value="completed"
+                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
+                          currentFilter === "completed"
+                            ? "bg-white text-slate-900 shadow-sm"
+                            : "text-slate-500 hover:text-slate-700"
+                        }`}
+                      >
+                        Completed
+                      </button>
+                    </div>
+                    <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
+                      {currentFilter === "all" && `${pendingTodos} remaining`}
+                      {currentFilter === "active" && `${pendingTodos} active`}
+                      {currentFilter === "completed" && `${completedTodos} done`}
+                    </span>
+                  </div>
                 </form>
-              </div>
-              
-              {/* Filter Tabs - Using plain links for reliability */}
-              <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
-                <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
-                  <Link
-                    href={buildFilterUrl("all")}
-                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
-                      currentFilter === "all"
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    All
-                  </Link>
-                  <Link
-                    href={buildFilterUrl("active")}
-                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
-                      currentFilter === "active"
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    Active
-                  </Link>
-                  <Link
-                    href={buildFilterUrl("completed")}
-                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
-                      currentFilter === "completed"
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    Completed
-                  </Link>
-                </div>
-                <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
-                  {currentFilter === "all" && `${pendingTodos} remaining`}
-                  {currentFilter === "active" && `${pendingTodos} active`}
-                  {currentFilter === "completed" && `${completedTodos} done`}
-                </span>
               </div>
 
               <TodoList 
