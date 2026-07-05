@@ -12,13 +12,12 @@ type FilterType = "all" | "active" | "completed";
 
 export default function TodoList({
   initialTodos,
-  filter = "all",
-  searchTerm = "",
 }: {
   initialTodos: Todo[];
-  filter?: FilterType;
-  searchTerm?: string;
 }) {
+  const [filter, setFilter] = useState<FilterType>("all");
+  const [searchTerm, setSearchTerm] = useState("");
+
   const [optimisticTodos, setOptimisticTodos] = useOptimistic(
     initialTodos,
     (state, action: {
@@ -57,18 +56,14 @@ export default function TodoList({
   const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // ✅ Combined filter + search logic
   const filteredTodos = optimisticTodos.filter((todo) => {
-    // 1. Apply status filter
     if (filter === "active" && todo.completed) return false;
     if (filter === "completed" && !todo.completed) return false;
 
-    // 2. Apply search filter (if any)
     if (searchTerm.trim()) {
       return todo.title.toLowerCase().includes(searchTerm.toLowerCase().trim());
     }
 
-    // 3. Include otherwise
     return true;
   });
 
@@ -135,7 +130,48 @@ export default function TodoList({
   }, [editingId, editValue]);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search todos..."
+            className="w-full px-3 py-2 pl-9 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-slate-50"
+            aria-label="Search todos"
+          />
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Filter Buttons */}
+      <div className="flex gap-2">
+        {(["all", "active", "completed"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+              filter === f
+                ? "bg-blue-600 text-white shadow-sm"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            {f === "all" ? "All" : f === "active" ? "Active" : "Completed"}
+          </button>
+        ))}
+      </div>
+
+      {/* Todo List */}
+      <div className="space-y-2">
       {filteredTodos.length === 0 ? (
         <p className="text-gray-500 text-center py-8 text-sm">
           {searchTerm.trim() && "No todos match your search."}
@@ -214,6 +250,7 @@ export default function TodoList({
           </div>
         ))
       )}
+    </div>
     </div>
   );
 }

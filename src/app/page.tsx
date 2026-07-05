@@ -4,24 +4,10 @@ import { signOut } from "./auth/actions";
 import { db } from "@/db";
 import { todos } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import Link from "next/link";
 import TodoList from "@/components/TodoList";
-import { CheckCircle, Circle, ListTodo, LogOut, Plus, X } from "lucide-react";
+import { CheckCircle, Circle, ListTodo, LogOut, Plus } from "lucide-react";
 
-
-type FilterType = "all" | "active" | "completed";
-
-function getFilterFromURL(searchParams: { filter?: string }): FilterType {
-  const filter = searchParams.filter;
-  if (filter === "active" || filter === "completed") return filter;
-  return "all";
-}
-
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: { filter?: string; search?: string };
-}) {
+export default async function Home() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -41,19 +27,6 @@ export default async function Home({
   const totalTodos = userTodos.length;
   const completedTodos = userTodos.filter(t => t.completed).length;
   const pendingTodos = totalTodos - completedTodos;
-
-  const currentFilter = getFilterFromURL(searchParams);
-  const searchTerm = searchParams?.search || "";
-
-  // Build URL helper
-  const buildFilterUrl = (filter: FilterType) => {
-    const params = new URLSearchParams();
-    if (filter !== "all") params.set("filter", filter);
-    if (searchTerm) params.set("search", searchTerm);
-
-    const query = params.toString();
-    return query ? `/?${query}` : "/";
-  };
 
   return (
     <main className="min-h-screen bg-slate-50 py-8 px-4 md:px-8">
@@ -152,86 +125,7 @@ export default async function Home({
           <div className="lg:col-span-3">
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
               
-              {/* Search Bar */}
-              <div className="mb-4">
-                <form method="GET" action="/" className="relative">
-                  <input
-                    type="text"
-                    name="search"
-                    defaultValue={searchTerm}
-                    placeholder="Search todos..."
-                    className="w-full px-3 py-2 pl-9 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-slate-50"
-                  />
-                  <svg
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  {searchTerm && (
-                    <Link
-                      href={buildFilterUrl(currentFilter)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
-                    >
-                      <X className="w-4 h-4" />
-                    </Link>
-                  )}
-
-                  <div className="mt-4 flex items-center justify-between border-b border-slate-200 pb-3">
-                    <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
-                      <button
-                        type="submit"
-                        name="filter"
-                        value="all"
-                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
-                          currentFilter === "all"
-                            ? "bg-white text-slate-900 shadow-sm"
-                            : "text-slate-500 hover:text-slate-700"
-                        }`}
-                      >
-                        All
-                      </button>
-                      <button
-                        type="submit"
-                        name="filter"
-                        value="active"
-                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
-                          currentFilter === "active"
-                            ? "bg-white text-slate-900 shadow-sm"
-                            : "text-slate-500 hover:text-slate-700"
-                        }`}
-                      >
-                        Active
-                      </button>
-                      <button
-                        type="submit"
-                        name="filter"
-                        value="completed"
-                        className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
-                          currentFilter === "completed"
-                            ? "bg-white text-slate-900 shadow-sm"
-                            : "text-slate-500 hover:text-slate-700"
-                        }`}
-                      >
-                        Completed
-                      </button>
-                    </div>
-                    <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
-                      {currentFilter === "all" && `${pendingTodos} remaining`}
-                      {currentFilter === "active" && `${pendingTodos} active`}
-                      {currentFilter === "completed" && `${completedTodos} done`}
-                    </span>
-                  </div>
-                </form>
-              </div>
-
-              <TodoList 
-                initialTodos={userTodos} 
-                filter={currentFilter} 
-                searchTerm={searchTerm} 
-              />
+              <TodoList initialTodos={userTodos} />
             </div>
           </div>
 
