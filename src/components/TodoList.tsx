@@ -21,23 +21,31 @@ export default function TodoList({
 }) {
   const [optimisticTodos, setOptimisticTodos] = useOptimistic(
     initialTodos,
-    (state, action: { type: "toggle" | "delete" | "edit"; id: number; newTitle?: string }) => {
-      if (action.type === "delete") {
+    (state, action: {
+      type: "toggle" | "delete" | "edit" | "reset";
+      id?: number;
+      newTitle?: string;
+      todos?: Todo[];
+    }) => {
+      if (action.type === "delete" && action.id !== undefined) {
         return state.filter((todo) => todo.id !== action.id);
       }
-      if (action.type === "toggle") {
+      if (action.type === "toggle" && action.id !== undefined) {
         return state.map((todo) =>
           todo.id === action.id
             ? { ...todo, completed: !todo.completed }
             : todo
         );
       }
-      if (action.type === "edit" && action.newTitle) {
+      if (action.type === "edit" && action.id !== undefined && action.newTitle) {
         return state.map((todo) =>
           todo.id === action.id
             ? { ...todo, title: action.newTitle! }
             : todo
         );
+      }
+      if (action.type === "reset" && action.todos) {
+        return action.todos;
       }
       return state;
     }
@@ -111,6 +119,10 @@ export default function TodoList({
       cancelEdit();
     }
   };
+
+  useEffect(() => {
+    setOptimisticTodos({ type: "reset", todos: initialTodos });
+  }, [initialTodos, setOptimisticTodos]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
