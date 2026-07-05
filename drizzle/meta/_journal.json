@@ -15,6 +15,13 @@
       "when": 1783217372138,
       "tag": "0001_curly_barracuda",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783227871787,
+      "tag": "0002_narrow_lord_tyger",
+      "breakpoints": true
     }
   ]
 }
