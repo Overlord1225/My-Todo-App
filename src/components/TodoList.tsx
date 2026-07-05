@@ -8,14 +8,13 @@ import { todos } from "@/db/schema";
 import { InferSelectModel } from "drizzle-orm";
 
 type Todo = InferSelectModel<typeof todos>;
-
 type FilterType = "all" | "active" | "completed";
 
-export default function TodoList({ 
-  initialTodos, 
+export default function TodoList({
+  initialTodos,
   filter = "all",
-  searchTerm = ""
-}: { 
+  searchTerm = "",
+}: {
   initialTodos: Todo[];
   filter?: FilterType;
   searchTerm?: string;
@@ -50,15 +49,18 @@ export default function TodoList({
   const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Apply filters AND search
+  // ✅ Combined filter + search logic
   const filteredTodos = optimisticTodos.filter((todo) => {
     // 1. Apply status filter
-    if (filter === "active") return !todo.completed;
-    if (filter === "completed") return todo.completed;
-    // 2. Apply search filter (case-insensitive)
+    if (filter === "active" && todo.completed) return false;
+    if (filter === "completed" && !todo.completed) return false;
+
+    // 2. Apply search filter (if any)
     if (searchTerm.trim()) {
       return todo.title.toLowerCase().includes(searchTerm.toLowerCase().trim());
     }
+
+    // 3. Include otherwise
     return true;
   });
 
@@ -170,7 +172,7 @@ export default function TodoList({
                 tabIndex={0}
                 aria-label="Edit todo"
               >
-                {/* Highlight matching text in search results */}
+                {/* Highlight matching search term */}
                 {searchTerm.trim() ? (
                   <HighlightText text={todo.title} highlight={searchTerm.trim()} />
                 ) : (
@@ -204,15 +206,15 @@ export default function TodoList({
   );
 }
 
-// Helper component to highlight matching text
+// Helper component for highlighting search matches
 function HighlightText({ text, highlight }: { text: string; highlight: string }) {
   if (!highlight.trim()) return <>{text}</>;
-  
-  const parts = text.split(new RegExp(`(${highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
-  
+
+  const parts = text.split(new RegExp(`(${highlight.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi"));
+
   return (
     <>
-      {parts.map((part, i) => 
+      {parts.map((part, i) =>
         part.toLowerCase() === highlight.toLowerCase() ? (
           <span key={i} className="bg-yellow-200 rounded px-0.5">{part}</span>
         ) : (
