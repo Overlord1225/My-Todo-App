@@ -1,11 +1,11 @@
 import { signUp } from "../auth/actions";
 
-export default function SignupPage({
+export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: { error?: string };
+  searchParams: Promise<{ error?: string }>;
 }) {
-  const error = searchParams?.error;
+  const { error } = await searchParams;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">

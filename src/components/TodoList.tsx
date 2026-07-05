@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useOptimistic, useTransition } from "react";
 import { Trash2, Check, Pencil, Calendar, X } from "lucide-react";
 import { deleteTodo, toggleTodo, editTodo } from "@/app/actions";
@@ -67,6 +67,7 @@ export default function TodoList({
   const [editPriority, setEditPriority] = useState<"low" | "medium" | "high">("medium");
   const [editDueDate, setEditDueDate] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const editContainerRef = useRef<HTMLDivElement>(null);
 
   // Combined filter + search + sort
   const filteredTodos = optimisticTodos
@@ -111,24 +112,24 @@ export default function TodoList({
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
-  const saveEdit = (id: number) => {
+  const saveEdit = useCallback((id: number) => {
     const trimmed = editTitle.trim();
     if (!trimmed) {
       setEditingId(null);
       return;
     }
-    setOptimisticTodos({
-      type: "edit",
-      id,
-      newTitle: trimmed,
-      newPriority: editPriority,
-      newDueDate: editDueDate,
-    });
     startTransition(async () => {
+      setOptimisticTodos({
+        type: "edit",
+        id,
+        newTitle: trimmed,
+        newPriority: editPriority,
+        newDueDate: editDueDate,
+      });
       await editTodo(id, trimmed, editPriority, editDueDate);
     });
     setEditingId(null);
-  };
+  }, [editDueDate, editPriority, editTitle, setOptimisticTodos, startTransition]);
 
   const cancelEdit = () => {
     setEditingId(null);
@@ -145,15 +146,26 @@ export default function TodoList({
     }
   };
 
+  const handleTitleKeyDown = (e: React.KeyboardEvent, todo: Todo) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      startEditing(todo);
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (editingId !== null && inputRef.current && !inputRef.current.contains(e.target as Node)) {
+      if (
+        editingId !== null &&
+        editContainerRef.current &&
+        !editContainerRef.current.contains(e.target as Node)
+      ) {
         saveEdit(editingId);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [editingId, editTitle]);
+  }, [editingId, saveEdit]);
 
   // Filter button config
   const filterOptions: { value: FilterType; label: string }[] = [
@@ -224,7 +236,7 @@ export default function TodoList({
 
               {/* Edit Mode */}
               {editingId === todo.id ? (
-                <div className="flex-1 flex flex-col sm:flex-row gap-2">
+                <div ref={editContainerRef} className="flex-1 flex flex-col sm:flex-row gap-2">
                   <input
                     ref={inputRef}
                     type="text"
@@ -263,6 +275,7 @@ export default function TodoList({
                       }`}
                       onClick={() => startEditing(todo)}
                       onDoubleClick={() => startEditing(todo)}
+                      onKeyDown={(e) => handleTitleKeyDown(e, todo)}
                       role="button"
                       tabIndex={0}
                     >

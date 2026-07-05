@@ -1,12 +1,11 @@
 import { signIn } from "../auth/actions";
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string; message?: string };
+  searchParams: Promise<{ error?: string; message?: string }>;
 }) {
-  const error = searchParams?.error;
-  const message = searchParams?.message;
+  const { error, message } = await searchParams;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
@@ -61,7 +60,7 @@ export default function LoginPage({
         </form>
 
         <p className="text-center text-sm text-slate-600 mt-6">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <a href="/signup" className="text-blue-600 hover:underline font-medium">
             Create one
           </a>
