@@ -2,49 +2,61 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useOptimistic, useTransition } from "react";
-import { Trash2, Check, Pencil } from "lucide-react";
+import { Trash2, Check, Pencil, Calendar, X } from "lucide-react";
 import { deleteTodo, toggleTodo, editTodo } from "@/app/actions";
 import { todos } from "@/db/schema";
 import { InferSelectModel } from "drizzle-orm";
+import PriorityBadge from "./PriorityBadge";
+import { format } from "date-fns";
 
 type Todo = InferSelectModel<typeof todos>;
 type FilterType = "all" | "active" | "completed";
 
+// Priority sort order: High → Medium → Low
+const priorityOrder = { high: 0, medium: 1, low: 2 };
+
 export default function TodoList({
   initialTodos,
+  filter = "all",
+  searchTerm = "",
 }: {
   initialTodos: Todo[];
+  filter?: FilterType;
+  searchTerm?: string;
 }) {
-  const [filter, setFilter] = useState<FilterType>("all");
-  const [searchTerm, setSearchTerm] = useState("");
-
   const [optimisticTodos, setOptimisticTodos] = useOptimistic(
     initialTodos,
-    (state, action: {
-      type: "toggle" | "delete" | "edit" | "reset";
-      id?: number;
-      newTitle?: string;
-      todos?: Todo[];
-    }) => {
-      if (action.type === "delete" && action.id !== undefined) {
+    (
+      state,
+      action: {
+        type: "toggle" | "delete" | "edit";
+        id: number;
+        newTitle?: string;
+        newPriority?: "low" | "medium" | "high";
+        newDueDate?: string | null;
+      }
+    ) => {
+      if (action.type === "delete") {
         return state.filter((todo) => todo.id !== action.id);
       }
-      if (action.type === "toggle" && action.id !== undefined) {
+      if (action.type === "toggle") {
         return state.map((todo) =>
           todo.id === action.id
             ? { ...todo, completed: !todo.completed }
             : todo
         );
       }
-      if (action.type === "edit" && action.id !== undefined && action.newTitle) {
+      if (action.type === "edit") {
         return state.map((todo) =>
           todo.id === action.id
-            ? { ...todo, title: action.newTitle! }
+            ? {
+                ...todo,
+                title: action.newTitle ?? todo.title,
+                priority: action.newPriority ?? todo.priority,
+                dueDate: action.newDueDate !== undefined ? action.newDueDate : todo.dueDate,
+              }
             : todo
         );
-      }
-      if (action.type === "reset" && action.todos) {
-        return action.todos;
       }
       return state;
     }
@@ -53,19 +65,31 @@ export default function TodoList({
   const [isPending, startTransition] = useTransition();
 
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editValue, setEditValue] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [editPriority, setEditPriority] = useState<"low" | "medium" | "high">("medium");
+  const [editDueDate, setEditDueDate] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const filteredTodos = optimisticTodos.filter((todo) => {
-    if (filter === "active" && todo.completed) return false;
-    if (filter === "completed" && !todo.completed) return false;
+  // Combined filter + search + sort
+  const filteredTodos = optimisticTodos
+    .filter((todo) => {
+      // Status filter
+      if (filter === "active" && todo.completed) return false;
+      if (filter === "completed" && !todo.completed) return false;
 
-    if (searchTerm.trim()) {
-      return todo.title.toLowerCase().includes(searchTerm.toLowerCase().trim());
-    }
+      // Search filter
+      if (searchTerm.trim()) {
+        return todo.title.toLowerCase().includes(searchTerm.toLowerCase().trim());
+      }
 
-    return true;
-  });
+      return true;
+    })
+    .sort((a, b) => {
+      // Sort by priority (High → Low)
+      const aPriority = a.priority || "medium";
+      const bPriority = b.priority || "medium";
+      return priorityOrder[aPriority] - priorityOrder[bPriority];
+    });
 
   const handleToggle = (id: number) => {
     startTransition(async () => {
@@ -83,19 +107,27 @@ export default function TodoList({
 
   const startEditing = (todo: Todo) => {
     setEditingId(todo.id);
-    setEditValue(todo.title);
+    setEditTitle(todo.title);
+    setEditPriority(todo.priority || "medium");
+    setEditDueDate(todo.dueDate || null);
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const saveEdit = (id: number) => {
-    const trimmed = editValue.trim();
+    const trimmed = editTitle.trim();
     if (!trimmed) {
       setEditingId(null);
       return;
     }
-    setOptimisticTodos({ type: "edit", id, newTitle: trimmed });
+    setOptimisticTodos({
+      type: "edit",
+      id,
+      newTitle: trimmed,
+      newPriority: editPriority,
+      newDueDate: editDueDate,
+    });
     startTransition(async () => {
-      await editTodo(id, trimmed);
+      await editTodo(id, trimmed, editPriority, editDueDate);
     });
     setEditingId(null);
   };
@@ -116,10 +148,6 @@ export default function TodoList({
   };
 
   useEffect(() => {
-    setOptimisticTodos({ type: "reset", todos: initialTodos });
-  }, [initialTodos, setOptimisticTodos]);
-
-  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (editingId !== null && inputRef.current && !inputRef.current.contains(e.target as Node)) {
         saveEdit(editingId);
@@ -127,51 +155,10 @@ export default function TodoList({
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [editingId, editValue]);
+  }, [editingId, editTitle]);
 
   return (
-    <div className="space-y-4">
-      {/* Search and Filter Controls */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search todos..."
-            className="w-full px-3 py-2 pl-9 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-slate-50"
-            aria-label="Search todos"
-          />
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
-      </div>
-
-      {/* Filter Buttons */}
-      <div className="flex gap-2">
-        {(["all", "active", "completed"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-              filter === f
-                ? "bg-blue-600 text-white shadow-sm"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-          >
-            {f === "all" ? "All" : f === "active" ? "Active" : "Completed"}
-          </button>
-        ))}
-      </div>
-
-      {/* Todo List */}
-      <div className="space-y-2">
+    <div className="space-y-2">
       {filteredTodos.length === 0 ? (
         <p className="text-gray-500 text-center py-8 text-sm">
           {searchTerm.trim() && "No todos match your search."}
@@ -180,96 +167,117 @@ export default function TodoList({
           {!searchTerm.trim() && filter === "completed" && "No completed todos yet."}
         </p>
       ) : (
-        filteredTodos.map((todo) => (
-          <div
-            key={todo.id}
-            className={`flex items-center justify-between gap-3 border p-3 rounded-lg shadow-sm hover:shadow-md transition-shadow ${
-              isPending ? "opacity-50" : "opacity-100"
-            }`}
-          >
-            <button
-              onClick={() => handleToggle(todo.id)}
-              className={`flex items-center justify-center w-5 h-5 rounded-full border-2 transition-colors shrink-0 ${
-                todo.completed
-                  ? "bg-green-500 border-green-500"
-                  : "border-gray-300 hover:border-blue-500"
-              }`}
-              aria-label={todo.completed ? "Mark as incomplete" : "Mark as complete"}
+        filteredTodos.map((todo) => {
+          const isOverdue = todo.dueDate && new Date(todo.dueDate) < new Date() && !todo.completed;
+
+          return (
+            <div
+              key={todo.id}
+              className={`flex items-center justify-between gap-3 border p-3 rounded-lg shadow-sm hover:shadow-md transition-shadow ${
+                isPending ? "opacity-50" : "opacity-100"
+              } ${isOverdue ? "border-red-200 bg-red-50/50" : ""}`}
             >
-              {todo.completed && <Check size={14} className="text-white" />}
-            </button>
-
-            {editingId === todo.id ? (
-              <input
-                ref={inputRef}
-                type="text"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onKeyDown={(e) => handleKeyDown(e, todo.id)}
-                className="flex-1 border border-blue-500 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                aria-label="Edit todo title"
-              />
-            ) : (
-              <span
-                className={`flex-1 text-gray-800 cursor-pointer ${
-                  todo.completed ? "line-through text-gray-400" : ""
-                }`}
-                onClick={() => startEditing(todo)}
-                onDoubleClick={() => startEditing(todo)}
-                role="button"
-                tabIndex={0}
-                aria-label="Edit todo"
-              >
-                {/* Highlight matching search term */}
-                {searchTerm.trim() ? (
-                  <HighlightText text={todo.title} highlight={searchTerm.trim()} />
-                ) : (
-                  todo.title
-                )}
-              </span>
-            )}
-
-            <div className="flex items-center gap-2">
-              {editingId !== todo.id && (
-                <button
-                  onClick={() => startEditing(todo)}
-                  className="text-gray-400 hover:text-blue-500 transition-colors"
-                  aria-label="Edit todo"
-                >
-                  <Pencil size={16} />
-                </button>
-              )}
+              {/* Toggle Button */}
               <button
-                onClick={() => handleDelete(todo.id)}
-                className="text-gray-400 hover:text-red-500 transition-colors"
-                aria-label="Delete todo"
+                onClick={() => handleToggle(todo.id)}
+                className={`flex items-center justify-center w-5 h-5 rounded-full border-2 transition-colors shrink-0 ${
+                  todo.completed
+                    ? "bg-green-500 border-green-500"
+                    : "border-gray-300 hover:border-blue-500"
+                }`}
+                aria-label={todo.completed ? "Mark as incomplete" : "Mark as complete"}
               >
-                <Trash2 size={18} />
+                {todo.completed && <Check size={14} className="text-white" />}
               </button>
+
+              {/* Edit Mode */}
+              {editingId === todo.id ? (
+                <div className="flex-1 flex flex-col sm:flex-row gap-2">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, todo.id)}
+                    className="flex-1 border border-blue-500 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    aria-label="Edit todo title"
+                  />
+                  <select
+                    value={editPriority}
+                    onChange={(e) => setEditPriority(e.target.value as "low" | "medium" | "high")}
+                    className="border border-slate-200 rounded px-2 py-1 text-sm bg-slate-50"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                  <input
+                    type="date"
+                    value={editDueDate || ""}
+                    onChange={(e) => setEditDueDate(e.target.value || null)}
+                    className="border border-slate-200 rounded px-2 py-1 text-sm bg-slate-50"
+                  />
+                </div>
+              ) : (
+                /* Display Mode */
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      className={`cursor-pointer ${
+                        todo.completed ? "line-through text-gray-400" : "text-gray-800"
+                      }`}
+                      onClick={() => startEditing(todo)}
+                      onDoubleClick={() => startEditing(todo)}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      {todo.title}
+                    </span>
+                    <PriorityBadge priority={todo.priority || "medium"} />
+                    {todo.dueDate && (
+                      <span className={`text-xs flex items-center gap-1 ${
+                        isOverdue ? "text-red-600 font-medium" : "text-gray-400"
+                      }`}>
+                        <Calendar size={12} />
+                        {format(new Date(todo.dueDate), "MMM d")}
+                        {isOverdue && " (Overdue!)"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 shrink-0">
+                {editingId !== todo.id && (
+                  <button
+                    onClick={() => startEditing(todo)}
+                    className="text-gray-400 hover:text-blue-500 transition-colors"
+                    aria-label="Edit todo"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                )}
+                {editingId === todo.id && (
+                  <button
+                    onClick={cancelEdit}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+                <button
+                  onClick={() => handleDelete(todo.id)}
+                  className="text-gray-400 hover:text-red-500 transition-colors"
+                  aria-label="Delete todo"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
             </div>
-          </div>
-        ))
+          );
+        })
       )}
     </div>
-    </div>
-  );
-}
-
-// Helper component for highlighting search matches
-function HighlightText({ text, highlight }: { text: string; highlight: string }) {
-  if (!highlight.trim()) return <>{text}</>;
-
-  const parts = text.split(new RegExp(`(${highlight.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi"));
-
-  return (
-    <>
-      {parts.map((part, i) =>
-        part.toLowerCase() === highlight.toLowerCase() ? (
-          <span key={i} className="bg-yellow-200 rounded px-0.5">{part}</span>
-        ) : (
-          <span key={i}>{part}</span>
-        )
-      )}
-    </>
   );
 }

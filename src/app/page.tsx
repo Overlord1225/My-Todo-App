@@ -97,20 +97,42 @@ export default async function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           
           {/* Left Column: Add Todo */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm sticky top-8">
-              <h2 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                Add New Task
-              </h2>
-              <form action={addTodo} className="space-y-3">
-                <input
-                  name="title"
-                  type="text"
-                  placeholder="What needs to be done?"
-                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-slate-50"
-                  required
-                />
+          {/* Left Column: Add Todo */}
+<div className="lg:col-span-1">
+  <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm sticky top-8">
+    <h2 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+      <Plus className="w-4 h-4" />
+      Add New Task
+    </h2>
+    <form action={addTodo} className="space-y-3">
+      <input
+        name="title"
+        type="text"
+        placeholder="What needs to be done?"
+        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-slate-50"
+        required
+      />
+      
+      {/* Priority Dropdown */}
+      <div className="flex gap-2">
+        <select
+          name="priority"
+          className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
+          defaultValue="medium"
+        >
+          <option value="low">🟢 Low</option>
+          <option value="medium">🟡 Medium</option>
+          <option value="high">🔴 High</option>
+        </select>
+        
+        {/* Due Date Input */}
+                  <input
+                    name="dueDate"
+                    type="date"
+                    className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
+                  />
+                </div>
+                
                 <button 
                   type="submit" 
                   className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm"
