@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Todo Dashboard",
+  title: "My Todo List",
   description: "Modern and Minimal",
 };
 
