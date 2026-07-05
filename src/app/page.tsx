@@ -5,12 +5,11 @@ import { db } from "@/db";
 import { todos } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import TodoList from "@/components/TodoList";
-import { CheckCircle, Circle, ListTodo, LogOut, Plus } from "lucide-react";
+import FilterTabs from "@/components/FilterTabs";
+import { CheckCircle, Circle, ListTodo, LogOut, Plus, X } from "lucide-react";
 
-// Define filter type
 type FilterType = "all" | "active" | "completed";
 
-// Get filter from URL params
 function getFilterFromURL(searchParams: { filter?: string }): FilterType {
   const filter = searchParams.filter;
   if (filter === "active" || filter === "completed") return filter;
@@ -49,7 +48,7 @@ export default async function Home({
     <main className="min-h-screen bg-slate-50 py-8 px-4 md:px-8">
       <div className="max-w-6xl mx-auto">
         
-        {/* Header remains the same */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
@@ -71,7 +70,7 @@ export default async function Home({
           </form>
         </div>
 
-        {/* Stats Grid remains the same */}
+        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
             <div className="flex items-center justify-between">
@@ -145,9 +144,6 @@ export default async function Home({
               {/* Search Bar */}
               <div className="mb-4">
                 <form method="GET" action="/" className="relative">
-                  {searchTerm && (
-                    <input type="hidden" name="filter" value={currentFilter} />
-                  )}
                   <input
                     type="text"
                     name="search"
@@ -168,52 +164,19 @@ export default async function Home({
                       href={`/?filter=${currentFilter}`}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
                     >
-                      ✕
+                      <X className="w-4 h-4" />
                     </a>
                   )}
                 </form>
               </div>
               
-              {/* Filter Tabs */}
-              <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
-                <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
-                  <a
-                    href={`/?search=${encodeURIComponent(searchTerm)}`}
-                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
-                      currentFilter === "all"
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    All
-                  </a>
-                  <a
-                    href={`/?filter=active&search=${encodeURIComponent(searchTerm)}`}
-                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
-                      currentFilter === "active"
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    Active
-                  </a>
-                  <a
-                    href={`/?filter=completed&search=${encodeURIComponent(searchTerm)}`}
-                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
-                      currentFilter === "completed"
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    Completed
-                  </a>
-                </div>
-                <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
-                  {currentFilter === "all" && `${pendingTodos} remaining`}
-                  {currentFilter === "active" && `${pendingTodos} active`}
-                  {currentFilter === "completed" && `${completedTodos} done`}
-                </span>
-              </div>
+              {/* Filter Tabs - Using the new client component */}
+              <FilterTabs 
+                currentFilter={currentFilter}
+                searchTerm={searchTerm}
+                pendingTodos={pendingTodos}
+                completedTodos={completedTodos}
+              />
 
               <TodoList initialTodos={userTodos} filter={currentFilter} searchTerm={searchTerm} />
             </div>
@@ -224,5 +187,3 @@ export default async function Home({
     </main>
   );
 }
-
-// Helper function (add this at the bottom)
