@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { todos } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import TodoList from "@/components/TodoList";
-import { CheckCircle, Circle, ListTodo, LogOut, Plus } from "lucide-react";
+import { Calendar, CheckCircle, Circle, ListTodo, LogOut, Plus } from "lucide-react";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -126,11 +126,14 @@ export default async function Home() {
         </select>
         
         {/* Due Date Input */}
-                  <input
-                    name="dueDate"
-                    type="date"
-                    className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
-                  />
+                  <div className="relative flex-1">
+                    <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <input
+                      name="dueDate"
+                      type="date"
+                      className="w-full pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50"
+                    />
+                  </div>
                 </div>
                 
                 <button 

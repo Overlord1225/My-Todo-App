@@ -17,13 +17,11 @@ const priorityOrder = { high: 0, medium: 1, low: 2 };
 
 export default function TodoList({
   initialTodos,
-  filter = "all",
-  searchTerm = "",
 }: {
   initialTodos: Todo[];
-  filter?: FilterType;
-  searchTerm?: string;
 }) {
+  const [filter, setFilter] = useState<FilterType>("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const [optimisticTodos, setOptimisticTodos] = useOptimistic(
     initialTodos,
     (
@@ -157,8 +155,42 @@ export default function TodoList({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [editingId, editTitle]);
 
+  // Filter button config
+  const filterOptions: { value: FilterType; label: string }[] = [
+    { value: "all", label: "All" },
+    { value: "active", label: "Active" },
+    { value: "completed", label: "Completed" },
+  ];
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
+      {/* Filter & Search Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 pb-2">
+        <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+          {filterOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setFilter(opt.value)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                filter === opt.value
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <input
+          type="text"
+          placeholder="Search todos..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="flex-1 px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50"
+        />
+      </div>
+
+      <div className="space-y-2">
       {filteredTodos.length === 0 ? (
         <p className="text-gray-500 text-center py-8 text-sm">
           {searchTerm.trim() && "No todos match your search."}
@@ -211,12 +243,15 @@ export default function TodoList({
                     <option value="medium">Medium</option>
                     <option value="high">High</option>
                   </select>
-                  <input
-                    type="date"
-                    value={editDueDate || ""}
-                    onChange={(e) => setEditDueDate(e.target.value || null)}
-                    className="border border-slate-200 rounded px-2 py-1 text-sm bg-slate-50"
-                  />
+                  <div className="relative">
+                    <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                    <input
+                      type="date"
+                      value={editDueDate || ""}
+                      onChange={(e) => setEditDueDate(e.target.value || null)}
+                      className="pl-7 pr-2 py-1 text-sm border border-slate-200 rounded bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
                 </div>
               ) : (
                 /* Display Mode */
@@ -278,6 +313,7 @@ export default function TodoList({
           );
         })
       )}
+    </div>
     </div>
   );
 }
