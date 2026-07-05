@@ -38,7 +38,7 @@ export default async function Home() {
           <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <ListTodo className="w-8 h-8 text-blue-600" />
-              My Todo Dashboard
+              My Todo List
             </h1>
             <p className="text-sm text-slate-500 mt-1">
               Welcome back, {user.email}
