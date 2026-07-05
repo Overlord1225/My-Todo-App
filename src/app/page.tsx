@@ -152,6 +152,7 @@ export default async function Home({
               {/* Search Bar */}
               <div className="mb-4">
                 <form method="GET" action="/" className="relative">
+                  <input type="hidden" name="filter" value={currentFilter} />
                   <input
                     type="text"
                     name="search"
