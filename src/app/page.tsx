@@ -6,7 +6,7 @@ import { todos } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import TodoList from "@/components/TodoList";
 import { CheckCircle, Circle, ListTodo, LogOut, Plus, X } from "lucide-react";
-import Link from "next/link";
+
 
 type FilterType = "all" | "active" | "completed";
 
@@ -191,7 +191,7 @@ export default async function Home({
                   >
                     All
                   </a>
-                  <link
+                  <a
                     href={buildFilterUrl("active")}
                     className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
                       currentFilter === "active"
@@ -200,8 +200,8 @@ export default async function Home({
                     }`}
                   >
                     Active
-                  </link>
-                  <link
+                  </a>
+                  <a
                     href={buildFilterUrl("completed")}
                     className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
                       currentFilter === "completed"
@@ -210,7 +210,7 @@ export default async function Home({
                     }`}
                   >
                     Completed
-                  </link>
+                  </a>
                 </div>
                 <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
                   {currentFilter === "all" && `${pendingTodos} remaining`}
