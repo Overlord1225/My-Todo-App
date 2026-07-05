@@ -7,6 +7,7 @@ import { deleteTodo, toggleTodo, editTodo } from "@/app/actions";
 import { todos } from "@/db/schema";
 import { InferSelectModel } from "drizzle-orm";
 import PriorityBadge from "./PriorityBadge";
+import DatePicker from "./DatePicker";
 import { format } from "date-fns";
 
 type Todo = InferSelectModel<typeof todos>;
@@ -177,13 +178,13 @@ export default function TodoList({
   return (
     <div className="space-y-4">
       {/* Filter & Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 pb-2">
-        <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+      <div className="flex flex-col gap-3 pb-2 sm:flex-row">
+        <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
           {filterOptions.map((opt) => (
             <button
               key={opt.value}
               onClick={() => setFilter(opt.value)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 filter === opt.value
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"
@@ -198,7 +199,7 @@ export default function TodoList({
           placeholder="Search todos..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50"
+          className="h-10 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
         />
       </div>
 
@@ -217,7 +218,7 @@ export default function TodoList({
           return (
             <div
               key={todo.id}
-              className={`flex items-center justify-between gap-3 border p-3 rounded-lg shadow-sm hover:shadow-md transition-shadow ${
+              className={`flex items-center justify-between gap-3 rounded-lg border bg-white p-3 shadow-sm transition hover:border-slate-300 hover:shadow-md ${
                 isPending ? "opacity-50" : "opacity-100"
               } ${isOverdue ? "border-red-200 bg-red-50/50" : ""}`}
             >
@@ -243,35 +244,33 @@ export default function TodoList({
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     onKeyDown={(e) => handleKeyDown(e, todo.id)}
-                    className="flex-1 border border-blue-500 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="h-9 flex-1 rounded-lg border border-blue-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                     aria-label="Edit todo title"
                   />
                   <select
                     value={editPriority}
                     onChange={(e) => setEditPriority(e.target.value as "low" | "medium" | "high")}
-                    className="border border-slate-200 rounded px-2 py-1 text-sm bg-slate-50"
+                    className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
                     <option value="high">High</option>
                   </select>
-                  <div className="relative">
-                    <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                    <input
-                      type="date"
-                      value={editDueDate || ""}
-                      onChange={(e) => setEditDueDate(e.target.value || null)}
-                      className="pl-7 pr-2 py-1 text-sm border border-slate-200 rounded bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
+                  <DatePicker
+                    value={editDueDate}
+                    onChange={setEditDueDate}
+                    label="Pick due date"
+                    compact
+                    className="sm:w-40"
+                  />
                 </div>
               ) : (
                 /* Display Mode */
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
-                      className={`cursor-pointer ${
-                        todo.completed ? "line-through text-gray-400" : "text-gray-800"
+                      className={`cursor-pointer rounded-sm outline-none transition focus-visible:ring-2 focus-visible:ring-blue-500/30 ${
+                        todo.completed ? "line-through text-slate-400" : "text-slate-900"
                       }`}
                       onClick={() => startEditing(todo)}
                       onDoubleClick={() => startEditing(todo)}
@@ -284,7 +283,7 @@ export default function TodoList({
                     <PriorityBadge priority={todo.priority || "medium"} />
                     {todo.dueDate && (
                       <span className={`text-xs flex items-center gap-1 ${
-                        isOverdue ? "text-red-600 font-medium" : "text-gray-400"
+                        isOverdue ? "text-red-600 font-medium" : "text-slate-400"
                       }`}>
                         <Calendar size={12} />
                         {format(new Date(todo.dueDate), "MMM d")}
@@ -300,7 +299,7 @@ export default function TodoList({
                 {editingId !== todo.id && (
                   <button
                     onClick={() => startEditing(todo)}
-                    className="text-gray-400 hover:text-blue-500 transition-colors"
+                    className="rounded-md p-1 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
                     aria-label="Edit todo"
                   >
                     <Pencil size={16} />
@@ -309,14 +308,15 @@ export default function TodoList({
                 {editingId === todo.id && (
                   <button
                     onClick={cancelEdit}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                    aria-label="Cancel edit"
                   >
                     <X size={16} />
                   </button>
                 )}
                 <button
                   onClick={() => handleDelete(todo.id)}
-                  className="text-gray-400 hover:text-red-500 transition-colors"
+                  className="rounded-md p-1 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
                   aria-label="Delete todo"
                 >
                   <Trash2 size={18} />
