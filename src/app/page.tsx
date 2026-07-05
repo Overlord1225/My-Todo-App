@@ -5,8 +5,8 @@ import { db } from "@/db";
 import { todos } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import TodoList from "@/components/TodoList";
-import FilterTabs from "@/components/FilterTabs";
 import { CheckCircle, Circle, ListTodo, LogOut, Plus, X } from "lucide-react";
+import Link from "next/link";
 
 type FilterType = "all" | "active" | "completed";
 
@@ -43,6 +43,14 @@ export default async function Home({
 
   const currentFilter = getFilterFromURL(searchParams);
   const searchTerm = searchParams?.search || "";
+
+  // Build URL helper
+  const buildFilterUrl = (filter: FilterType) => {
+    const params = new URLSearchParams();
+    if (filter !== "all") params.set("filter", filter);
+    if (searchTerm) params.set("search", searchTerm);
+    return `/?${params.toString()}`;
+  };
 
   return (
     <main className="min-h-screen bg-slate-50 py-8 px-4 md:px-8">
@@ -161,7 +169,7 @@ export default async function Home({
                   </svg>
                   {searchTerm && (
                     <a
-                      href={`/?filter=${currentFilter}`}
+                      href={buildFilterUrl(currentFilter)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
                     >
                       <X className="w-4 h-4" />
@@ -170,15 +178,52 @@ export default async function Home({
                 </form>
               </div>
               
-              {/* Filter Tabs - Using the new client component */}
-              <FilterTabs 
-                currentFilter={currentFilter}
-                searchTerm={searchTerm}
-                pendingTodos={pendingTodos}
-                completedTodos={completedTodos}
-              />
+              {/* Filter Tabs - Using plain links for reliability */}
+              <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
+                <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                  <a
+                    href={buildFilterUrl("all")}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
+                      currentFilter === "all"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    All
+                  </a>
+                  <link
+                    href={buildFilterUrl("active")}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
+                      currentFilter === "active"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    Active
+                  </link>
+                  <link
+                    href={buildFilterUrl("completed")}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
+                      currentFilter === "completed"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    Completed
+                  </link>
+                </div>
+                <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
+                  {currentFilter === "all" && `${pendingTodos} remaining`}
+                  {currentFilter === "active" && `${pendingTodos} active`}
+                  {currentFilter === "completed" && `${completedTodos} done`}
+                </span>
+              </div>
 
-              <TodoList initialTodos={userTodos} filter={currentFilter} searchTerm={searchTerm} />
+              <TodoList 
+                initialTodos={userTodos} 
+                filter={currentFilter} 
+                searchTerm={searchTerm} 
+              />
             </div>
           </div>
 
