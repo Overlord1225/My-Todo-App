@@ -9,7 +9,17 @@ import { InferSelectModel } from "drizzle-orm";
 
 type Todo = InferSelectModel<typeof todos>;
 
-export default function TodoList({ initialTodos }: { initialTodos: Todo[] }) {
+type FilterType = "all" | "active" | "completed";
+
+export default function TodoList({ 
+  initialTodos, 
+  filter = "all",
+  searchTerm = ""
+}: { 
+  initialTodos: Todo[];
+  filter?: FilterType;
+  searchTerm?: string;
+}) {
   const [optimisticTodos, setOptimisticTodos] = useOptimistic(
     initialTodos,
     (state, action: { type: "toggle" | "delete" | "edit"; id: number; newTitle?: string }) => {
@@ -36,10 +46,21 @@ export default function TodoList({ initialTodos }: { initialTodos: Todo[] }) {
 
   const [isPending, startTransition] = useTransition();
 
-  // Track which todo is being edited
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Apply filters AND search
+  const filteredTodos = optimisticTodos.filter((todo) => {
+    // 1. Apply status filter
+    if (filter === "active") return !todo.completed;
+    if (filter === "completed") return todo.completed;
+    // 2. Apply search filter (case-insensitive)
+    if (searchTerm.trim()) {
+      return todo.title.toLowerCase().includes(searchTerm.toLowerCase().trim());
+    }
+    return true;
+  });
 
   const handleToggle = (id: number) => {
     startTransition(async () => {
@@ -58,20 +79,16 @@ export default function TodoList({ initialTodos }: { initialTodos: Todo[] }) {
   const startEditing = (todo: Todo) => {
     setEditingId(todo.id);
     setEditValue(todo.title);
-    // Focus input after render
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const saveEdit = (id: number) => {
     const trimmed = editValue.trim();
     if (!trimmed) {
-      // If empty, revert to original
       setEditingId(null);
       return;
     }
-    // Optimistically update
     setOptimisticTodos({ type: "edit", id, newTitle: trimmed });
-    // Actually save
     startTransition(async () => {
       await editTodo(id, trimmed);
     });
@@ -82,7 +99,6 @@ export default function TodoList({ initialTodos }: { initialTodos: Todo[] }) {
     setEditingId(null);
   };
 
-  // Keyboard handlers
   const handleKeyDown = (e: React.KeyboardEvent, id: number) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -94,7 +110,6 @@ export default function TodoList({ initialTodos }: { initialTodos: Todo[] }) {
     }
   };
 
-  // Click outside to save
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (editingId !== null && inputRef.current && !inputRef.current.contains(e.target as Node)) {
@@ -107,17 +122,21 @@ export default function TodoList({ initialTodos }: { initialTodos: Todo[] }) {
 
   return (
     <div className="space-y-2">
-      {optimisticTodos.length === 0 ? (
-        <p className="text-gray-500 text-center">No todos yet. Add one above!</p>
+      {filteredTodos.length === 0 ? (
+        <p className="text-gray-500 text-center py-8 text-sm">
+          {searchTerm.trim() && "No todos match your search."}
+          {!searchTerm.trim() && filter === "all" && "No todos yet. Add one above!"}
+          {!searchTerm.trim() && filter === "active" && "🎉 All done! No active todos."}
+          {!searchTerm.trim() && filter === "completed" && "No completed todos yet."}
+        </p>
       ) : (
-        optimisticTodos.map((todo) => (
+        filteredTodos.map((todo) => (
           <div
             key={todo.id}
             className={`flex items-center justify-between gap-3 border p-3 rounded-lg shadow-sm hover:shadow-md transition-shadow ${
               isPending ? "opacity-50" : "opacity-100"
             }`}
           >
-            {/* Toggle Button */}
             <button
               onClick={() => handleToggle(todo.id)}
               className={`flex items-center justify-center w-5 h-5 rounded-full border-2 transition-colors shrink-0 ${
@@ -130,7 +149,6 @@ export default function TodoList({ initialTodos }: { initialTodos: Todo[] }) {
               {todo.completed && <Check size={14} className="text-white" />}
             </button>
 
-            {/* Title with Edit */}
             {editingId === todo.id ? (
               <input
                 ref={inputRef}
@@ -152,12 +170,16 @@ export default function TodoList({ initialTodos }: { initialTodos: Todo[] }) {
                 tabIndex={0}
                 aria-label="Edit todo"
               >
-                {todo.title}
+                {/* Highlight matching text in search results */}
+                {searchTerm.trim() ? (
+                  <HighlightText text={todo.title} highlight={searchTerm.trim()} />
+                ) : (
+                  todo.title
+                )}
               </span>
             )}
 
             <div className="flex items-center gap-2">
-              {/* Edit Button (pencil) */}
               {editingId !== todo.id && (
                 <button
                   onClick={() => startEditing(todo)}
@@ -167,8 +189,6 @@ export default function TodoList({ initialTodos }: { initialTodos: Todo[] }) {
                   <Pencil size={16} />
                 </button>
               )}
-
-              {/* Delete Button */}
               <button
                 onClick={() => handleDelete(todo.id)}
                 className="text-gray-400 hover:text-red-500 transition-colors"
@@ -181,5 +201,24 @@ export default function TodoList({ initialTodos }: { initialTodos: Todo[] }) {
         ))
       )}
     </div>
+  );
+}
+
+// Helper component to highlight matching text
+function HighlightText({ text, highlight }: { text: string; highlight: string }) {
+  if (!highlight.trim()) return <>{text}</>;
+  
+  const parts = text.split(new RegExp(`(${highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+  
+  return (
+    <>
+      {parts.map((part, i) => 
+        part.toLowerCase() === highlight.toLowerCase() ? (
+          <span key={i} className="bg-yellow-200 rounded px-0.5">{part}</span>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
   );
 }

@@ -7,7 +7,21 @@ import { eq } from "drizzle-orm";
 import TodoList from "@/components/TodoList";
 import { CheckCircle, Circle, ListTodo, LogOut, Plus } from "lucide-react";
 
-export default async function Home() {
+// Define filter type
+type FilterType = "all" | "active" | "completed";
+
+// Get filter from URL params
+function getFilterFromURL(searchParams: { filter?: string }): FilterType {
+  const filter = searchParams.filter;
+  if (filter === "active" || filter === "completed") return filter;
+  return "all";
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: { filter?: string; search?: string };
+}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -28,17 +42,19 @@ export default async function Home() {
   const completedTodos = userTodos.filter(t => t.completed).length;
   const pendingTodos = totalTodos - completedTodos;
 
+  const currentFilter = getFilterFromURL(searchParams);
+  const searchTerm = searchParams?.search || "";
+
   return (
     <main className="min-h-screen bg-slate-50 py-8 px-4 md:px-8">
-      {/* Main Container */}
       <div className="max-w-6xl mx-auto">
         
-        {/* Header */}
+        {/* Header remains the same */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <ListTodo className="w-8 h-8 text-blue-600" />
-              My Todo List
+              My Todo Dashboard
             </h1>
             <p className="text-sm text-slate-500 mt-1">
               Welcome back, {user.email}
@@ -55,7 +71,7 @@ export default async function Home() {
           </form>
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Grid remains the same */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
             <div className="flex items-center justify-between">
@@ -94,10 +110,10 @@ export default async function Home() {
           </div>
         </div>
 
-        {/* Two-Column Layout: Add Todo + List */}
+        {/* Two-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           
-          {/* Left Column: Add Todo Form */}
+          {/* Left Column: Add Todo */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm sticky top-8">
               <h2 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
@@ -114,7 +130,7 @@ export default async function Home() {
                 />
                 <button 
                   type="submit" 
-                  className="w-full btn-primary text-sm font-medium"
+                  className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm"
                 >
                   Add Task
                 </button>
@@ -125,15 +141,81 @@ export default async function Home() {
           {/* Right Column: Todo List */}
           <div className="lg:col-span-3">
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-slate-700">
-                  Your Tasks
-                </h2>
+              
+              {/* Search Bar */}
+              <div className="mb-4">
+                <form method="GET" action="/" className="relative">
+                  {searchTerm && (
+                    <input type="hidden" name="filter" value={currentFilter} />
+                  )}
+                  <input
+                    type="text"
+                    name="search"
+                    defaultValue={searchTerm}
+                    placeholder="Search todos..."
+                    className="w-full px-3 py-2 pl-9 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-slate-50"
+                  />
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  {searchTerm && (
+                    <a
+                      href={`/?filter=${currentFilter}`}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                    >
+                      ✕
+                    </a>
+                  )}
+                </form>
+              </div>
+              
+              {/* Filter Tabs */}
+              <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
+                <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                  <a
+                    href={`/?search=${encodeURIComponent(searchTerm)}`}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
+                      currentFilter === "all"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    All
+                  </a>
+                  <a
+                    href={`/?filter=active&search=${encodeURIComponent(searchTerm)}`}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
+                      currentFilter === "active"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    Active
+                  </a>
+                  <a
+                    href={`/?filter=completed&search=${encodeURIComponent(searchTerm)}`}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
+                      currentFilter === "completed"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    Completed
+                  </a>
+                </div>
                 <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
-                  {pendingTodos} remaining
+                  {currentFilter === "all" && `${pendingTodos} remaining`}
+                  {currentFilter === "active" && `${pendingTodos} active`}
+                  {currentFilter === "completed" && `${completedTodos} done`}
                 </span>
               </div>
-              <TodoList initialTodos={userTodos} />
+
+              <TodoList initialTodos={userTodos} filter={currentFilter} searchTerm={searchTerm} />
             </div>
           </div>
 
@@ -142,3 +224,5 @@ export default async function Home() {
     </main>
   );
 }
+
+// Helper function (add this at the bottom)
